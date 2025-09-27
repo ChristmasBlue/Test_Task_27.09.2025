@@ -82,10 +82,9 @@ func (r *Repository) Get(id int) ([]byte, error) {
 		}
 		defer file.Close()
 
-		//var jsonFile []byte
 		//читаем файл
 		jsonFile, err := io.ReadAll(file)
-		if err != nil /*|| n == 0*/ {
+		if err != nil {
 			log.Printf("Error read file task, id: %d\n", id)
 			return nil, err
 		}

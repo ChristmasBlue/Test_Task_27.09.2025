@@ -103,7 +103,6 @@ func (q *Queue) Enqueue(task *models.Task) error {
 	defer file.Close()
 
 	//дозапись в файл
-	//err = binary.Write(file, binary.LittleEndian, int64(task.ID))
 	_, err = file.WriteString(strconv.Itoa(task.ID) + "\n")
 	if err != nil {
 		log.Printf("Error writing in file queue: %s\n", q.filePath)

@@ -1,8 +1,3 @@
-// менеджер
-// 1. принимать json задачу
-// 2. парсить в структуру
-// 3. отдавать структуру на обработку
-// 4. хранить флаги выполненных задач
 package manager
 
 import (
@@ -90,13 +85,6 @@ func (m *TaskManager) AddTask(taskJson []byte) error {
 	err = m.queue.Enqueue(task)
 	if err != nil {
 		log.Println("Error adding task in queue.")
-		return err
-	}
-
-	//сохраняем задание в репозиторий
-	err = m.repo.Save(task)
-	if err != nil {
-		log.Println("Error adding task in repository.")
 		return err
 	}
 
