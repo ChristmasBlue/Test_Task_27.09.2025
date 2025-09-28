@@ -1,10 +1,10 @@
 package tools
 
-import "test_task/domain/models"
+import "test_task/internal/domain"
 
-func NewTask() *models.Task {
-	return &models.Task{
+func NewTask() *domain.Task {
+	return &domain.Task{
 		URLs:    make([]string, 0),
-		Results: make(map[string]models.FileResult),
+		Results: make(map[string]domain.FileResult),
 	}
 }

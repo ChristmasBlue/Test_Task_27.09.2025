@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -8,7 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"test_task/domain/models"
+	"test_task/internal/domain"
 	"test_task/pkg/parser"
 	"test_task/pkg/tools"
 )
@@ -35,7 +36,7 @@ func NewRepository(pathDir string) (*Repository, error) {
 }
 
 // сохраняет/создаёт задачу
-func (r *Repository) Save(task *models.Task) error {
+func (r *Repository) Save(task *domain.Task) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -67,7 +68,7 @@ func (r *Repository) Save(task *models.Task) error {
 }
 
 // возвращает задачу по id
-func (r *Repository) Get(id int) ([]byte, error) {
+func (r *Repository) Get(id int) (*domain.Task, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -88,8 +89,15 @@ func (r *Repository) Get(id int) ([]byte, error) {
 			log.Printf("Error read file task, id: %d\n", id)
 			return nil, err
 		}
+
+		model := tools.NewTask()
+		err = json.Unmarshal(jsonFile, model)
+		if err != nil {
+			log.Println("Error create new model, during parsing.")
+			return nil, err
+		}
 		//в случае успеха возвращаем считанный файл
-		return jsonFile, nil
+		return model, nil
 	} else {
 		log.Printf("Error, task with id: %d does not exist.\n", id)
 		return nil, fmt.Errorf("task with id: %d does not exist.", id)

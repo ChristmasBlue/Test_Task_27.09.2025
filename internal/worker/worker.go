@@ -4,13 +4,13 @@ import (
 	"context"
 	"log"
 	"sync"
-	"test_task/domain/constants"
-	"test_task/domain/models"
+	"test_task/internal/constants"
+	"test_task/internal/domain"
 	"time"
 )
 
 type taskRepository interface {
-	Save(*models.Task) error
+	Save(*domain.Task) error
 }
 
 type taskHandler interface {
@@ -18,7 +18,7 @@ type taskHandler interface {
 }
 
 type taskQueue interface {
-	Dequeue() (*models.Task, error)
+	Dequeue() (*domain.Task, error)
 	TaskCompleated(int) error
 	IsEmpty() bool
 }
@@ -93,7 +93,7 @@ func (w *Worker) ProcessTask(idWorker int) {
 						return
 					}
 					//результат выполнения по ссылке
-					res := models.FileResult{
+					res := domain.FileResult{
 						URL:   url,
 						Path:  "",
 						Error: nil,

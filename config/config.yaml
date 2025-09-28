@@ -1,0 +1,6 @@
+directory_for_download: "tools/downloads"
+directory_task_status: "tools/status"
+directory_tasks: "tools/tasks"
+directory_queue: "tools/queue"
+file_queue: "queue.txt"
+address_server: "0.0.0.0:8080"

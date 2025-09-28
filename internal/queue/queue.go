@@ -8,19 +8,18 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"test_task/domain/models"
-	"test_task/pkg/parser"
+	"test_task/internal/domain"
 	"test_task/pkg/tools"
 )
 
 type taskRepository interface {
-	Get(int) ([]byte, error) //возвращает состояние задачи по id
-	Save(*models.Task) error //созадёт/сохраняет задачу
+	Get(int) (*domain.Task, error) //возвращает состояние задачи по id
+	Save(*domain.Task) error       //созадёт/сохраняет задачу
 }
 
 type Queue struct {
 	filePath string
-	queue    []*models.Task
+	queue    []*domain.Task
 	queueID  []int
 	mu       sync.Mutex
 	repo     taskRepository
@@ -32,7 +31,7 @@ func NewQueue(pathDir, filename string, repo taskRepository) (*Queue, error) {
 
 	q := &Queue{
 		filePath: filePathName,
-		queue:    make([]*models.Task, 0),
+		queue:    make([]*domain.Task, 0),
 		queueID:  make([]int, 0),
 		repo:     repo,
 	}
@@ -60,17 +59,12 @@ func NewQueue(pathDir, filename string, repo taskRepository) (*Queue, error) {
 			//проходим циклом по срезу id для добавления в очередь
 			for _, id := range ids {
 				//получаем статус задания из репозитория по id
-				data, err := q.repo.Get(int(id))
+				task, err := q.repo.Get(id)
 				if err != nil {
 					log.Println("Error read file from repository.")
 					return nil, err
 				}
-				//парсим данные заданий в структуру
-				task, err := parser.ParsJsonToTask(data)
-				if err != nil {
-					log.Println("Error parse json task.")
-					return nil, err
-				}
+
 				//добавляем задание в очередь
 				q.queue = append(q.queue, task)
 				q.queueID = append(q.queueID, int(id))
@@ -90,7 +84,7 @@ func NewQueue(pathDir, filename string, repo taskRepository) (*Queue, error) {
 }
 
 // добавление в очередь
-func (q *Queue) Enqueue(task *models.Task) error {
+func (q *Queue) Enqueue(task *domain.Task) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -124,7 +118,7 @@ func (q *Queue) Enqueue(task *models.Task) error {
 }
 
 // получение из очереди с дальнейшим очищением из очереди
-func (q *Queue) Dequeue() (*models.Task, error) {
+func (q *Queue) Dequeue() (*domain.Task, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 

@@ -1,7 +1,7 @@
-package models
+package domain
 
 import (
-	"test_task/domain/constants"
+	"test_task/internal/constants"
 	"time"
 )
 

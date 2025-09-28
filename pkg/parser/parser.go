@@ -4,24 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"test_task/domain/models"
-	"test_task/pkg/tools"
 )
 
-// парсим json
-func ParsJsonToTask(jsonFile []byte) (*models.Task, error) {
-	task := tools.NewTask()
-	err := json.Unmarshal(jsonFile, task)
-	if err != nil {
-		log.Println("Error create new Task model, during parsing.")
-		return nil, err
-	}
-	return task, nil
-}
-
 // создаём json
-func ParsTaskToJson(task *models.Task) ([]byte, error) {
-	jsonFile, err := json.MarshalIndent(task, "", "	")
+func ParsTaskToJson(model interface{}) ([]byte, error) {
+	jsonFile, err := json.MarshalIndent(model, "", "	")
 	if err != nil {
 		log.Println("Error create Json file, during parsing.")
 		return nil, err

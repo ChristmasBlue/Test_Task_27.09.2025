@@ -6,13 +6,14 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"test_task/domain/constants"
+	"test_task/internal/config"
+	"test_task/internal/constants"
 	"test_task/internal/handler"
 	"test_task/internal/manager"
 	"test_task/internal/queue"
 	"test_task/internal/repository"
+	"test_task/internal/services"
 	"test_task/internal/worker"
-	"test_task/pkg/services"
 	"test_task/pkg/tools"
 	"time"
 )
@@ -20,24 +21,31 @@ import (
 func Run() {
 	var wg sync.WaitGroup
 
+	//подключаем среды окружения
+	conf, err := config.GetAddiction(constants.FileYaml)
+	if err != nil {
+		log.Printf("Error connecting environment variable: %v\n", err)
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	//запускаем в отдельной горутине ожидание команды на остановку сервиса
 	go tools.StopContext(&ctx, cancel)
 	defer cancel()
 
-	handlerTask, err := handler.NewHandler(constants.DirectoryForDownload)
+	handlerTask, err := handler.NewHandler(conf.DirectoryForDownload)
 	if err != nil {
 		log.Printf("Error create/open directory for download: %v\n", err)
 		return
 	}
 
-	repo, err := repository.NewRepository(constants.DirectoryTaskStatus)
+	repo, err := repository.NewRepository(conf.DirectoryTaskStatus)
 	if err != nil {
 		log.Printf("Error create/open directory for repository: %v\n", err)
 		return
 	}
 
-	queueTask, err := queue.NewQueue(constants.DirectoryQueue, constants.FileQueue, repo)
+	queueTask, err := queue.NewQueue(conf.DirectoryQueue, conf.FileQueue, repo)
 	if err != nil {
 		log.Printf("Error create/open directory for queue: %v\n", err)
 		return
@@ -57,16 +65,16 @@ func Run() {
 
 	// Создаем HTTP сервер с поддержкой graceful shutdown
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    conf.AddressServer,
 		Handler: nil, // использует DefaultServeMux
 	}
 
 	// Запускаем сервер в отдельной горутине
 	serverErr := make(chan error, 1)
 	go func() {
-		fmt.Println("Сервер запущен на http://localhost:8080")
-		fmt.Println("Endpoint: POST http://localhost:8080/add")
-		fmt.Println("Endpoint: GET http://localhost:8080/info")
+		fmt.Printf("Сервер запущен на http://%s\n", conf.AddressServer)
+		fmt.Printf("Endpoint: POST http://%s/add\n", conf.AddressServer)
+		fmt.Printf("Endpoint: GET http://%s/info\n", conf.AddressServer)
 		fmt.Println("Остановите сервер сочетанием клавиш Ctrl+C")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

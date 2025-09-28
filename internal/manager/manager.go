@@ -1,23 +1,23 @@
 package manager
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
-	"test_task/domain/constants"
-	"test_task/domain/models"
+	"test_task/internal/constants"
+	"test_task/internal/domain"
+	"test_task/internal/models"
 	"test_task/pkg/tools"
 	"time"
 )
 
 type taskQueue interface {
-	Enqueue(*models.Task) error
+	Enqueue(*domain.Task) error
 }
 
 type taskRepository interface {
-	Save(*models.Task) error
-	Get(int) ([]byte, error)
+	Save(*domain.Task) error
+	Get(int) (*domain.Task, error)
 }
 
 type TaskManager struct {
@@ -35,19 +35,11 @@ func NewManager(queue taskQueue, repo taskRepository) *TaskManager {
 }
 
 // получение задачи, запрос GET
-func (m *TaskManager) GetTask(taskId []byte) ([]byte, error) {
-	//получаем из запроса ID
-	id := models.RequestIdTask{}
-	err := json.Unmarshal(taskId, &id)
-	if err != nil {
-		log.Printf("Error unmarshaling json task: %s", string(taskId))
-		return nil, err
-	}
-
+func (m *TaskManager) GetTask(taskId int) (*domain.Task, error) {
 	// Ищем задачу в репозитории
-	task, err := m.repo.Get(id.ID)
+	task, err := m.repo.Get(taskId)
 	if err != nil {
-		log.Printf("Error searching in repository task id %d: %v", id.ID, err)
+		log.Printf("Error searching in repository task id %d: %v", taskId, err)
 		return nil, err
 	}
 
@@ -55,38 +47,29 @@ func (m *TaskManager) GetTask(taskId []byte) ([]byte, error) {
 }
 
 // получение задачи, запрос POST
-func (m *TaskManager) AddTask(taskJson []byte) error {
+func (m *TaskManager) AddTask(addTask *models.AddTaskDto) (int, error) {
 	//получаем из запроса задачу
 	//парсим в структуру
 	task := tools.NewTask()
-	err := json.Unmarshal(taskJson, task)
-	if err != nil {
-		log.Printf("Error unmarshaling json task: %s", string(taskJson))
-		return err
-	}
-
-	// Простая валидация
-	if task.ID == 0 {
-		log.Println("Error id is empty.")
-		return fmt.Errorf("error id is empty")
-	}
+	task.URLs = addTask.URLs
 
 	//проверка URL
 	if len(task.URLs) == 0 {
 		log.Println("Error urls is empty.")
-		return fmt.Errorf("error urls is empty")
+		return 0, fmt.Errorf("error urls is empty")
 	}
 
 	//добавляем необходимую информацию о задании
 	task.CreatedAt = time.Now()
 	task.Status = constants.StatusPending
+	task.ID = int(time.Now().UnixMilli())
 
 	//добавляем задание в очередь
-	err = m.queue.Enqueue(task)
+	err := m.queue.Enqueue(task)
 	if err != nil {
 		log.Println("Error adding task in queue.")
-		return err
+		return 0, err
 	}
 
-	return nil
+	return task.ID, nil
 }

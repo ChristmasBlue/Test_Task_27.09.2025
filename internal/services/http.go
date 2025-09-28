@@ -6,12 +6,15 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"test_task/domain/models"
+	"strconv"
+	"test_task/internal/domain"
+	"test_task/internal/models"
+	"test_task/pkg/parser"
 )
 
 type taskManager interface {
-	AddTask([]byte) error
-	GetTask([]byte) ([]byte, error)
+	AddTask(*models.AddTaskDto) (int, error)
+	GetTask(int) (*domain.Task, error)
 }
 
 // добавление задания в обработку, запрос POST
@@ -52,8 +55,17 @@ func HandlerAddTask(management taskManager) func(w http.ResponseWriter, r *http.
 			return
 		}
 
-		//передаю менеджеру полученный json файл
-		err = management.AddTask(data)
+		//создаю модель Dto
+		taskDto := &models.AddTaskDto{URLs: make([]string, 0)}
+		err = json.Unmarshal(data, taskDto)
+		if err != nil {
+			http.Error(w, "Bad request body", http.StatusBadRequest)
+			log.Printf("Bad request body: %s\n", data)
+			return
+		}
+
+		//передаю менеджеру полученную модель
+		id, err := management.AddTask(taskDto)
 		if err != nil {
 			http.Error(w, "Error processing task", http.StatusBadRequest)
 			log.Printf("Error processing task: %v", err)
@@ -63,6 +75,7 @@ func HandlerAddTask(management taskManager) func(w http.ResponseWriter, r *http.
 		//отправляем успешный ответ
 		response := models.Response{
 			Status:  "success",
+			ID:      strconv.Itoa(id),
 			Message: fmt.Sprintf("Задача успешно получена."),
 			Details: "Сервис работает в режиме получения запросов",
 		}
@@ -76,7 +89,7 @@ func HandlerAddTask(management taskManager) func(w http.ResponseWriter, r *http.
 func HandlerGetInfoTask(management taskManager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Настраиваем заголовки CORS
-		w.Header().Set("Content-Type", "application/json")
+		//w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -93,30 +106,42 @@ func HandlerGetInfoTask(management taskManager) func(w http.ResponseWriter, r *h
 			return
 		}
 
-		//читаем запрос
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			log.Println("Error reading request body.")
-			return
-		}
-		defer r.Body.Close()
+		//получаем id из запроса
+		queryParam := r.URL.Query()
+
+		idQuery := queryParam.Get("id")
 
 		//проверяем что тело запроса не пустое
-		if len(data) == 0 {
+		if idQuery == "" {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
 			log.Println("Empty request body.")
 			return
 		}
 
+		id, err := strconv.Atoi(idQuery)
+		if err != nil {
+			http.Error(w, "Invalid Id.", http.StatusBadRequest)
+			log.Printf("Invalid Id: %s\n", idQuery)
+			return
+		}
+
 		//передаю менеджеру полученный json файл
-		req, err := management.GetTask(data)
+		//TODO get id from data
+		task, err := management.GetTask(id)
 		if err != nil {
 			http.Error(w, "Error processing task", http.StatusBadRequest)
 			log.Println("Error processing task.")
 			return
 		}
 
+		//парсим задачу
+		req, err := parser.ParsTaskToJson(task)
+		if err != nil {
+			http.Error(w, "Error processing task", http.StatusBadRequest)
+			log.Printf("Error parsing task: %v\n", req)
+			return
+		}
+		//TODO convert task to json
 		//отправляем успешный ответ
 		response := models.Response{
 			Status:  "success",

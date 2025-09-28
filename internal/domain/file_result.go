@@ -1,4 +1,4 @@
-package models
+package domain
 
 type FileResult struct {
 	URL   string `json:"url"`             //ссылка на скачиваемый файл
